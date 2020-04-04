@@ -5,6 +5,7 @@
 bin
 lib64
 pyvenv.cfg
+Scripts/
 
 
 # Byte-compiled / optimized / DLL files

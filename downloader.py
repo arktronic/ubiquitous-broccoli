@@ -7,6 +7,7 @@
 ###########################
 
 unicode_fixes = {
+    r'^�': '-',
     r'fianc�e': 'fiancée'
 }
 
@@ -22,11 +23,36 @@ from pysrt.srtitem import SubRipItem
 from pysrt.srttime import SubRipTime
 from time import sleep
 import subprocess
+import os
 
 print('Welcome! Please ensure ffmpeg is in your PATH.')
-print('Open your browser\'s network tab and select the video JSON descriptor URL.')
-print('Right-click it, and select "Copy as cURL". Any variant of it will work, just not the "copy all" ones.')
-curl = input('Paste the cURL command here: ')
+
+curl = ''
+try:
+    with open('.download-retry', 'r') as retryfile:
+        curl = retryfile.read()
+except IOError:
+    pass
+
+if curl != '':
+    retrybool = None
+    while retrybool is None:
+        retry = input('You have a cURL command saved. Try it again? [y/n]: ')
+        if retry == 'n' or retry == 'N':
+            retrybool = False
+        elif retry == 'y' or retry == 'Y':
+            retrybool = True
+        else:
+            print('Please enter "y" or "n".')
+    if not retrybool:
+        curl = ''
+
+if curl == '':
+    print('Open your browser\'s network tab and select the video JSON descriptor URL.')
+    print('Right-click it, and select "Copy as cURL". Any variant of it will work, just not the "copy all" ones.')
+    curl = input('Paste the cURL command here: ')
+    with open('.download-retry', 'w') as retryfile:
+        retryfile.write(curl)
 
 print('Retrieving JSON...')
 url = re.search(r'curl [\'"]([^\'"]+)[\'"]', curl).group(1)
@@ -50,7 +76,7 @@ with open('subs.srt', 'w') as srt:
     for caption in WebVTT().read("subs.vtt"):
             index += 1
             for find, replace in unicode_fixes.items():
-                caption.text = re.sub(find, replace, caption.text)
+                caption.text = re.sub(find, replace, caption.text, flags=re.MULTILINE)
             if caption.text.find('�') > -1:
                 raise Exception('FIXME: Found bad Unicode character at time index ' + caption.start + ': ' + caption.text)
             start = SubRipTime.from_ordinal(round(caption.start_in_seconds*1000))
@@ -88,3 +114,4 @@ subprocess.check_call(['ffmpeg', '-loglevel', 'info', '-y', '-reconnect', '1', '
     '-attach', 'cover.jpg', '-metadata:s:t', 'mimetype=image/jpeg', 'output.mkv'])
 
 print('Done!')
+os.remove('.download-retry')
