@@ -6,6 +6,7 @@ bin
 lib64
 pyvenv.cfg
 Scripts/
+.download-retry
 
 
 # Byte-compiled / optimized / DLL files
